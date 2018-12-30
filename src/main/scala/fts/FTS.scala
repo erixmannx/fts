@@ -2,6 +2,8 @@ package fts
 
 import scala.concurrent._
 
+import com.typesafe.scalalogging._
+
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 
@@ -9,22 +11,27 @@ import akka.stream._
 import akka.stream.scaladsl._
 import akka.util.ByteString
 
-object FTS {
+import fts.input._
+import fts.output._
+
+object FTS extends LazyLogging {
   def main (args : Array[String]) : Unit = {
 
-    val filePath = args(0)
+    val config = Configuration.getConfig()
+    val inputPath = config.getString("fts.input.path")
 
-    println(s"file path: $filePath")
+    logger.debug(s"input path: $inputPath")
 
     implicit val ec = ExecutionContext.global
-    implicit val actorSystem = ActorSystem("system")
-    implicit val materializer = ActorMaterializer()
+    implicit val sys = ActorSystem("system")
+    implicit val mat = ActorMaterializer()
 
-    val fileStream = getFileStream(filePath)
-    val printFut = printSourceContents(fileStream)
+    val inputPathActor = sys.actorOf(InputPathActor.props(inputPath), "inputPathActor")
+    val writerActor = sys.actorOf(WriterActor.props(), "writerActor")
 
     import scala.concurrent.duration.Duration
 
+/*
     for {
       res <- printFut 
     } yield {
@@ -32,18 +39,6 @@ object FTS {
     }
 
     Await.ready(printFut, Duration.Inf)
-  }
-
-  def getFileStream(filePath : String) : Source[ByteString, Future[IOResult]] = {
-    import java.nio.file.Path
-    import java.nio.file.Paths
-
-    val path = Paths.get(filePath)
-    FileIO.fromPath(path, chunkSize = 8192)
-  }
-
-  def printSourceContents(source : Source[ByteString, Future[IOResult]])(implicit mat : ActorMaterializer) : Future[IOResult] = {
-    val runnable : RunnableGraph[Future[IOResult]] = source.to(Sink.foreach((bs : ByteString) => println(bs.utf8String)))
-    runnable.run()
+*/
   }
 }

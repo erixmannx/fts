@@ -9,5 +9,5 @@ object Configuration {
 
   val config = ConfigFactory.parseFile(new File(s"$configPath/$configFile"))
 
-  def getConfig : Config = config
+  def getConfig() : Config = config
 }
