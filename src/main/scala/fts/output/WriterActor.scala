@@ -6,7 +6,7 @@ import akka.actor._
 import akka.util.ByteString
 
 object WriterActor {
-  def props() = Props()
+  def props = Props(new WriterActor())
 
   case class Print(byteString : ByteString)
 }
