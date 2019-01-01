@@ -35,7 +35,12 @@ class FTSNodeActor(inputPath : String) extends Actor with LazyLogging {
       logger.debug("Start writer actor")
       val writerActor = sys.actorOf(WriterActor.props, "writerActor")
 
+    case InputPathActor.NoMoreFiles =>
+      logger.debug("Input path actor sent no more files")
+      self ! InputDone
+
     case InputDone =>
+      logger.debug("Input done terminating actor system")
       sys.terminate
   }
 }

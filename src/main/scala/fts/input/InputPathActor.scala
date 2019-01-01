@@ -32,10 +32,14 @@ class InputPathActor(inputPath : String) extends Actor with LazyLogging {
 
   implicit val sys = context.system
   implicit val mat = ActorMaterializer()(context)
+  implicit val ec = ExecutionContext.global
+
   implicit val timeout = Timeout(5 seconds)
 
   val writer = Await.result(sys.actorSelection("user/writerActor").resolveOne(), Duration.Inf)
   logger.debug(s"Got writer $writer")
+
+  var parent : Option[ActorRef] = None;
 
   var inputPathManager : Option[InputPathManager] = None
 
@@ -44,24 +48,38 @@ class InputPathActor(inputPath : String) extends Actor with LazyLogging {
       logger.debug(s"Start with inputPath $inputPath")
       inputPathManager = Some(InputPathManager(inputPath))
 
+      parent = Some(sender())
       self ! StartFile
 
     case StartFile => 
       inputPathManager match {
         case Some(ipm) => 
-          val file = ipm.getNextFile()
-          logger.debug(s"StartFile $file")
+          val fileOption = ipm.getNextFile()
 
-          import java.nio.file.Path
-          import java.nio.file.Paths
+          fileOption match {
+            case Some(file) =>
+              logger.debug(s"StartFile $file")
 
-          val path = Paths.get(file)
-          val source = FileIO.fromPath(path, chunkSize = 8192)
+              import java.nio.file.Path
+              import java.nio.file.Paths
 
-          val runnable : RunnableGraph[Future[IOResult]] = source.to(Sink.foreach((bs : ByteString) => {
-            writer ! WriterActor.Print(bs)
-          }))
-          runnable.run()
+              val path = Paths.get(file)
+              val source = FileIO.fromPath(path, chunkSize = 8192)
+
+              val runnable : RunnableGraph[Future[IOResult]] = source.to(Sink.foreach((bs : ByteString) => {
+                writer ! WriterActor.Print(bs)
+              }))
+          
+              for {
+                f <- runnable.run()
+              } yield {
+                self ! StartFile
+              }
+
+            case None =>
+              logger.debug("No more files")
+              parent.get ! NoMoreFiles
+          }
 
         case None => 
           val message = "call Start first"

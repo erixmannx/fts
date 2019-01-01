@@ -9,10 +9,14 @@ object InputPathManager {
 class InputPathManager(path : String) {
   var files = getListOfFiles();
 
-  def getNextFile() : String = {
-    val file = files.head
-    files = files.tail
-    file.getPath()
+  def getNextFile() : Option[String] = {
+    if (files.isEmpty) {
+      None
+    } else {
+      val file = files.head
+      files = files.tail
+      Some(file.getPath())
+    }
   }
 
   private[this] def getListOfFiles() : List[File] = {
