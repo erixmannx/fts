@@ -21,19 +21,21 @@ class FTSNodeActor(inputPath : String) extends Actor with LazyLogging {
   import FTSNodeActor._
 
   implicit val ec = ExecutionContext.global
-  implicit val sys = ActorSystem("system")
   implicit val mat = ActorMaterializer()
+
+  var starter : Option[ActorRef] = None
 
   def receive = {
     case Start =>
+      starter = Some(sender())
       logger.debug(s"Start with input path $inputPath")
 
-      logger.debug("Start input path actor")
-      val inputPathActor = sys.actorOf(InputPathActor.props(inputPath), "inputPathActor")
-      inputPathActor ! InputPathActor.Start
-
       logger.debug("Start writer actor")
-      val writerActor = sys.actorOf(WriterActor.props, "writerActor")
+      val writerActor = context.actorOf(WriterActor.props, "writerActor")
+
+      logger.debug("Start input path actor")
+      val inputPathActor = context.actorOf(InputPathActor.props(inputPath), "inputPathActor")
+      inputPathActor ! InputPathActor.Start
 
     case InputPathActor.NoMoreFiles =>
       logger.debug("Input path actor sent no more files")
@@ -41,6 +43,6 @@ class FTSNodeActor(inputPath : String) extends Actor with LazyLogging {
 
     case InputDone =>
       logger.debug("Input done terminating actor system")
-      sys.terminate
+      context.system.terminate()
   }
 }

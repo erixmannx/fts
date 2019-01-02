@@ -36,7 +36,7 @@ class InputPathActor(inputPath : String) extends Actor with LazyLogging {
 
   implicit val timeout = Timeout(5 seconds)
 
-  val writer = Await.result(sys.actorSelection("user/writerActor").resolveOne(), Duration.Inf)
+  val writer = Await.result(sys.actorSelection("user/FTSNodeActor/writerActor").resolveOne(), Duration.Inf)
   logger.debug(s"Got writer $writer")
 
   var parent : Option[ActorRef] = None;
